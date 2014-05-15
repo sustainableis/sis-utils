@@ -2,7 +2,6 @@ from sisutils.endpoint import Endpoint
 import psycopg2
 from datetime import datetime
 from psycopg2.extras import DictCursor
-import pdb
 
 class NoConnectionException(Exception):
   pass
@@ -200,7 +199,6 @@ class PSQL(Endpoint):
           dataVals.append(value)
         query = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"%(table, ','.join(dataKeys), ','.join(dataVals))
         print query
-        pdb.set_trace()
         cursor = self.conn.cursor()
         cursor.execute(query)
         inserted_id = cursor.fetchone()[0]
