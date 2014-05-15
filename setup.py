@@ -21,7 +21,7 @@ setup(
   author='John Crawford',
   author_email='jcrawford@sustainableis.com',
   url='https://github.com/sustainableis/sis-utils',
-  download_url=''https://github.com/sustainableis/sis-utils',
+  download_url='https://github.com/sustainableis/sis-utils',
   license='None',
   classifiers=[
     'Programming Language :: Python :: 2',
