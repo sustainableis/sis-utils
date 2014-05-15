@@ -12,7 +12,7 @@ desc = 'A Python library for SIS resources to use for various common tasks'
 
 setup(
   name='sis-utils',
-  version='0.1',
+  version='0.1.1',
   description=desc,
   long_description=open(README).read(),
   package_dir={'sisutils': 'sisutils'},
