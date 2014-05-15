@@ -1,4 +1,4 @@
-from workers.endpoint import Endpoint
+from sisutils.endpoint import Endpoint
 import psycopg2
 from datetime import datetime
 from psycopg2.extras import DictCursor

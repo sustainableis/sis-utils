@@ -1,4 +1,4 @@
-from workers.config import Config
+from sisConfig.config import Config
 
 class AppConfig(Config):
   

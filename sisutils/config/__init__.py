@@ -1,4 +1,4 @@
-from workers.mongo import Mongo
+from sisutils.mongo import Mongo
 
 class MissingAppConfiguration(Exception):
   pass
