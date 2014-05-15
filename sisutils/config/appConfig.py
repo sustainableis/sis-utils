@@ -1,4 +1,4 @@
-from sisConfig.config import Config
+from sisutils.config import Config
 
 class AppConfig(Config):
   
