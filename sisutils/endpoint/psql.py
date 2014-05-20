@@ -3,6 +3,7 @@ import psycopg2
 from datetime import datetime
 from psycopg2.extras import DictCursor
 import traceback
+import pdb
 
 
 class NoConnectionException(Exception):
@@ -252,11 +253,14 @@ class PSQL(Endpoint):
               setList.append(k + '= %s')
             elif isinstance(v, int):
               setList.append(k + '= %s')
+            elif isinstance(v, datetime):
+              v = v.strftime('%Y-%m-%d %H:%M:%S')
+              setList.append(k + '= %s')
             elif isinstance(v,unicode):
               v = v.encode('ascii','ignore')
               setList.append(k + '= %s')
             else:
-              raise ValueError("Values for update must be of type String or Integer")
+              raise ValueError("Values for update must be of type String, Integer, or Datetime")
             valueList.append(v)
           if where is None:
             raise SelectorError("There was no selector found!")
@@ -281,13 +285,4 @@ class PSQL(Endpoint):
       return success
     else:
       raise NoConnectionException('You need to connect to the database!')
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+      
