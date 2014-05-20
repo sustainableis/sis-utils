@@ -2,8 +2,13 @@ from sisutils.endpoint import Endpoint
 import psycopg2
 from datetime import datetime
 from psycopg2.extras import DictCursor
+import traceback
+
 
 class NoConnectionException(Exception):
+  pass
+
+class SelectorError(Exception):
   pass
 
 
@@ -72,6 +77,7 @@ class PSQL(Endpoint):
             cursor.close()
         except NameError:
           pass
+      return []
     else:
       raise NoConnectionException('You need to connect to the database!')
 
@@ -132,6 +138,7 @@ class PSQL(Endpoint):
       dataList: (List of Dicts) key -> column name, value -> column value
   '''
   def insertMany(self, tableName, dataList):
+    success = False
     if not self.insertEndpoint:
       print 'Inserting is not allowed under the current configuration'
       return None
@@ -165,6 +172,7 @@ class PSQL(Endpoint):
         cursor = self.conn.cursor()
         cursor.execute(query)
         self.conn.commit()
+        success = True
       except Exception, e:
         print e
       finally:
@@ -173,6 +181,7 @@ class PSQL(Endpoint):
             cursor.close()
         except NameError:
           pass
+      return success
     else:
       raise NoConnectionException('You need to connect to the database!')
   
@@ -191,14 +200,9 @@ class PSQL(Endpoint):
       try:
         dataKeys = dataDict.keys()
         dataVals = []
-        for key,value in dataDict.items():
-          if isinstance(value,datetime):
-            value = value.strftime("'%Y-%m-%d %H:%M:%S'")
-          if isinstance(value,int):
-            value = str(value)
-          dataVals.append(value)
+        for key in dataKeys:
+          dataVals.append(dataDict[key])
         query = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"%(table, ','.join(dataKeys), ','.join(dataVals))
-        print query
         cursor = self.conn.cursor()
         cursor.execute(query)
         inserted_id = cursor.fetchone()[0]
@@ -214,21 +218,76 @@ class PSQL(Endpoint):
       return inserted_id
     else:
       raise NoConnectionException('You need to connect to the database!')
-      
+  
   '''
     Update a record in a table in the database
     Parameters:
       table:  tableName (String)
-      set: '%s'='%s' (String)
-      where: condition (String)
+      selector: the 'where' part of the query
+      dataDict: (List of Dicts) key -> column name, value -> column value
   '''
+  def updateMany(self, table, selector, dataList):
+    success = False
+    if not self.insertEndpoint:
+      print 'Inserting is not allowed under the current configuration'
+      return False
+    if not isinstance(dataList, list):
+      raise TypeError('insertMany arg[2] take type or subtype of a list!')
+    if self.conn:
+      try:
+        if len(dataList) > 0:
+          columnKeys = dataList[0].keys()
+        else:
+          return None
+        executionList = []
+        for row in dataList:
+          setList = []
+          valueList = []
+          where = None
+          for k,v in row.items():
+            if k == selector:
+              where = 'WHERE %s=%s'%(k,v)
+              continue
+            if isinstance(v, str):
+              setList.append(k + '= %s')
+            elif isinstance(v, int):
+              setList.append(k + '= %s')
+            elif isinstance(v,unicode):
+              v = v.encode('ascii','ignore')
+              setList.append(k + '= %s')
+            else:
+              raise ValueError("Values for update must be of type String or Integer")
+            valueList.append(v)
+          if where is None:
+            raise SelectorError("There was no selector found!")
+          executionList.append({'query': 'UPDATE '+ table + ' SET ' + ','.join(setList) + ' ' + where, 'val_tuple': tuple(valueList) })
+        
+        for execution in executionList:
+          cursor = self.conn.cursor()
+          cursor.execute(execution['query'],execution['val_tuple'])
+        self.conn.commit()
+        success = True
+          
+      except Exception, e:
+        print traceback.print_exc()
+        print e
+        raise
+      finally:
+        try:
+          if cursor:
+            cursor.close()
+        except NameError:
+          pass
+      return success
+    else:
+      raise NoConnectionException('You need to connect to the database!')
   
- 
-      
-      
-      
-      
-      
-      
-      
+  
+  
+  
+  
+  
+  
+  
+  
   
