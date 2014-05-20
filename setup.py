@@ -16,7 +16,7 @@ setup(
   description=desc,
   long_description=open(README).read(),
   package_dir={'sisutils': 'sisutils','sisutils.config':'sisutils/config','sisutils.mq':'sisutils/mq','sisutils.endpoint':'sisutils/endpoint','sisutils.email':'sisutils/email'},
-  packages=['sisutils','sisutils.mq','sisutils.config','sisutils.endpoint'],
+  packages=['sisutils','sisutils.mq','sisutils.config','sisutils.endpoint','sisutils.email'],
   install_requires=['msgpack-python','mandrill'],
   author='John Crawford',
   author_email='jcrawford@sustainableis.com',
