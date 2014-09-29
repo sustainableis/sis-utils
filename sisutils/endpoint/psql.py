@@ -3,8 +3,6 @@ import psycopg2
 from datetime import datetime
 from psycopg2.extras import DictCursor
 import traceback
-import pdb
-
 
 class NoConnectionException(Exception):
   pass
@@ -39,6 +37,39 @@ class PSQL(Endpoint):
   def close(self):
     if self.conn:
       self.conn.close()
+  
+  def getCursor(self):
+    if self.conn:
+      return self.conn.cursor()
+    else:
+      raise NoConnectionException('You need to connect to the database before you get a cursor!')
+  
+  def closeCursor(self, cursor):
+    if cursor is not None:
+      cursor.close()
+  
+  def rollbackCursor(self, cursor):
+    self.conn.rollback()
+      
+  def commitCursor(self, cursor):
+    self.conn.commit()
+      
+  def closeCursor(self, cursor):
+    if cursor is not None:
+      cursor.close()
+      
+  def cleanValue(self, value):
+    if value is None:
+      return 'NULL'
+    if isinstance(value, int):
+      return str(value)
+    elif isinstance(value, datetime):
+      return value.strftime("'%Y-%m-%d %H:%M:%S'")
+    elif isinstance(value,unicode):
+      return value.encode('ascii','ignore')
+    else:
+      return value
+    
   
   '''
     Execute a select on a table and return all the rows
@@ -156,11 +187,7 @@ class PSQL(Endpoint):
         for item in dataList:
           itemData = []
           for key in columnKeys:
-            if isinstance(item[key], datetime):
-              item[key] = "'"+str(item[key])+"'"
-            else:
-              item[key] = str(item[key])
-            itemData.append(item[key])
+            itemData.append(self.cleanValue(item[key]))
           columnData.append(itemData)
         # have all the data in lists now
         keyString = ','.join(columnKeys)
@@ -184,7 +211,7 @@ class PSQL(Endpoint):
           pass
       return success
     else:
-      raise NoConnectionException('You need to connect to the database!')
+      raise NoConnectionException('You need to connect to the database!')  
   
   '''
     Insert a record into a table in the database
@@ -192,28 +219,45 @@ class PSQL(Endpoint):
       table:  tableName (String)
       dataDict: key -> column name, value -> column value
   '''
-  def insertOne(self, table, dataDict):
+  def insertOne(self, table, dataDict, cursor=None, uniqueKeys=[], commit=True):
     inserted_id = None
     if not self.insertEndpoint:
       print 'Inserting is not allowed under the current configuration'
       return None
     if self.conn:
       try:
-        dataKeys = dataDict.keys()
+        dataKeys = []
         dataVals = []
-        for key in dataKeys:
-          dataVals.append(dataDict[key])
-        query = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"%(table, ','.join(dataKeys), ','.join(dataVals))
-        cursor = self.conn.cursor()
-        cursor.execute(query)
-        inserted_id = cursor.fetchone()[0]
-        self.conn.commit()
+        for key,value in dataDict.items():
+          dataKeys.append(key)
+          dataVals.append(self.cleanValue(value))
+        if len(uniqueKeys) > 0:
+          uniqueWhere = ""
+          for idx,key in enumerate(uniqueKeys):
+            uniqueWhere += "=".join([key,self.cleanValue(dataDict[uniqueKeys[idx]])])
+            if idx != len(uniqueKeys)-1:
+              uniqueWhere += ' and '
+          query = "INSERT INTO %s (%s) SELECT %s where not exists(select %s from %s where %s) returning id"%(table, ','.join(dataKeys), ','.join(dataVals), ','.join(dataKeys), table, uniqueWhere)
+        else:
+          query = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"%(table, ','.join(dataKeys), ','.join(dataVals))
+        print query
+        if cursor is None:
+          localCursor = self.conn.cursor()
+        else:
+          localCursor = cursor
+        localCursor.execute(query)
+        inserted_id = localCursor.fetchone()
+        if inserted_id:
+          inserted_id = inserted_id[0]
+        if commit:
+          self.conn.commit()
       except Exception, e:
         print e
+      	traceback.print_exc()  
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
       return inserted_id
@@ -249,23 +293,9 @@ class PSQL(Endpoint):
             if k == selector:
               where = 'WHERE %s=%s'%(k,v)
               continue
-            if isinstance(v, str):
-              setList.append(k + '= %s')
-            elif isinstance(v, int):
-              setList.append(k + '= %s')
-            elif isinstance(v, datetime):
-              v = v.strftime('%Y-%m-%d %H:%M:%S')
-              setList.append(k + '= %s')
-            elif isinstance(v,unicode):
-              v = v.encode('ascii','ignore')
-              setList.append(k + '= %s')
-            else:
-              raise ValueError("Values for update must be of type String, Integer, or Datetime")
-            valueList.append(v)
-          if where is None:
-            raise SelectorError("There was no selector found!")
+            valueList.append(self.cleanValue(v))
+            setList.append(k + '= %s')
           executionList.append({'query': 'UPDATE '+ table + ' SET ' + ','.join(setList) + ' ' + where, 'val_tuple': tuple(valueList) })
-        
         for execution in executionList:
           cursor = self.conn.cursor()
           cursor.execute(execution['query'],execution['val_tuple'])
@@ -285,4 +315,3 @@ class PSQL(Endpoint):
       return success
     else:
       raise NoConnectionException('You need to connect to the database!')
-      
