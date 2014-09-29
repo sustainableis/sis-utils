@@ -268,6 +268,8 @@ class PSQL(Endpoint):
     else:
       raise NoConnectionException('You need to connect to the database!')
   
+  
+  
   '''
     Update a record in a table in the database
     Parameters:
@@ -275,7 +277,7 @@ class PSQL(Endpoint):
       selector: the 'where' part of the query
       dataDict: (List of Dicts) key -> column name, value -> column value
   '''
-  def updateMany(self, table, selector, dataList):
+  def updateMany(self, table, selectors, dataList):
     success = False
     if not self.insertEndpoint:
       print 'Inserting is not allowed under the current configuration'
@@ -292,16 +294,18 @@ class PSQL(Endpoint):
         for row in dataList:
           setList = []
           valueList = []
-          where = None
+          wheres = []
           for k,v in row.items():
-            if k == selector:
-              where = 'WHERE %s=%s'%(k,v)
+            if k in selectors:
+              wheres.append('%s=%s'%(k,v))
               continue
             valueList.append(self.cleanValue(v))
             setList.append(k + '= %s')
+          where = 'WHERE ' + ' and '.join(wheres)
           executionList.append({'query': 'UPDATE '+ table + ' SET ' + ','.join(setList) + ' ' + where, 'val_tuple': tuple(valueList) })
         for execution in executionList:
           cursor = self.conn.cursor()
+          print execution
           cursor.execute(execution['query'],execution['val_tuple'])
         self.conn.commit()
         success = True
