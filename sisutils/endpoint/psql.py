@@ -268,6 +268,9 @@ class PSQL(Endpoint):
     else:
       raise NoConnectionException('You need to connect to the database!')
   
+  def upsert(self, table, selectors, dataDict, uniqueKeys=[]):
+    self.updateMany(table, selectors, [dataDict])
+    self.insertOne(table, dataDict, uniqueKeys=uniqueKeys)
   
   
   '''
