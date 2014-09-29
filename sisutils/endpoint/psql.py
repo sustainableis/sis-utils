@@ -267,7 +267,15 @@ class PSQL(Endpoint):
       return inserted_id
     else:
       raise NoConnectionException('You need to connect to the database!')
+  '''
+    Simple upsert - do an update first (unaffected if the row doesn't exist) and then
+    do a unique insert.
+    
+    # TODO - possible race condition between the update and the insert. Someone
+    could insert a high between the update and the insert and then there would
+    be a duplicate key error. 
   
+  '''
   def upsert(self, table, selectors, dataDict, uniqueKeys=[]):
     self.updateMany(table, selectors, [dataDict])
     self.insertOne(table, dataDict, uniqueKeys=uniqueKeys)
