@@ -33,7 +33,8 @@ class PSQL(Endpoint):
       print "Connected to PSQL Endpoint"              
     except Exception, e:
       print e
-  
+      raise
+ 
   def close(self):
     if self.conn:
       self.conn.close()
@@ -103,6 +104,7 @@ class PSQL(Endpoint):
         return rows
       except Exception, e:
         print e
+      	raise
       finally:
         try:
           if cursor:
@@ -133,7 +135,7 @@ class PSQL(Endpoint):
         return rows
       except Exception, e:
         print e
-        
+        raise  
       finally:
         try:
           if cursor:
@@ -152,7 +154,7 @@ class PSQL(Endpoint):
         self.conn.commit()
       except Exception, e:
         print e
-        
+      	raise  
       finally:
         try:
           if cursor:
@@ -203,6 +205,7 @@ class PSQL(Endpoint):
         success = True
       except Exception, e:
         print e
+        raise
       finally:
         try:
           if cursor:
@@ -254,6 +257,7 @@ class PSQL(Endpoint):
       except Exception, e:
         print e
       	traceback.print_exc()  
+      	raise
       finally:
         try:
           if cursor is None:
