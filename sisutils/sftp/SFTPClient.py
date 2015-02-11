@@ -83,6 +83,16 @@ class SFTPClient():
             except:
                 pass
             raise
+            
+    def password_auth(self, username, password):
+        try:
+            t.auth_password(username,password)
+        except Exception as e:
+            try:
+                self.transport.close()
+            except:
+                pass
+            raise
     
     def getClient(self):
     
