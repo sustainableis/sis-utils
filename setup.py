@@ -12,12 +12,12 @@ desc = 'A Python library for SIS resources to use for various common tasks'
 
 setup(
   name='sis-utils',
-  version='0.2.4',
+  version='0.2.5',
   description=desc,
   long_description=open(README).read(),
-  package_dir={'sisutils': 'sisutils','sisutils.config':'sisutils/config','sisutils.mq':'sisutils/mq','sisutils.endpoint':'sisutils/endpoint','sisutils.email':'sisutils/email'},
-  packages=['sisutils','sisutils.mq','sisutils.config','sisutils.endpoint','sisutils.email'],
-  install_requires=['msgpack-python','mandrill','psycopg2'],
+  package_dir={'sisutils': 'sisutils','sisutils.config':'sisutils/config','sisutils.mq':'sisutils/mq','sisutils.endpoint':'sisutils/endpoint','sisutils.email':'sisutils/email','sisutils.sftp':'sisutils/sftp'},
+  packages=['sisutils','sisutils.mq','sisutils.config','sisutils.endpoint','sisutils.email','sisutils.sftp'],
+  install_requires=['msgpack-python','mandrill','psycopg2','mysql-connector-python','paramiko'],
   author='John Crawford',
   author_email='jcrawford@sustainableis.com',
   url='https://github.com/sustainableis/sis-utils',
