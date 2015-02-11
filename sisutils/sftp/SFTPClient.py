@@ -14,6 +14,7 @@ class SFTPClient():
         self.port = port
         self.transport = None
         self.sftp = None
+        self.connect()
     
     def connect(self):
         try:
@@ -86,13 +87,13 @@ class SFTPClient():
             
     def password_auth(self, username, password):
         try:
-            t.auth_password(username,password)
+            self.transport.auth_password(username,password)
         except Exception as e:
             try:
                 self.transport.close()
             except:
                 pass
-            raise
+            raise e
     
     def getClient(self):
     
@@ -119,3 +120,5 @@ class SFTPClient():
             raise SFTPConnectionException('Connection to server not initiated!')
         
         self.transport.close()
+        
+        
