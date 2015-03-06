@@ -1,6 +1,7 @@
 from sisutils.endpoint import Endpoint
 import psycopg2
 from datetime import datetime
+from datetime import date
 from psycopg2.extras import DictCursor
 import traceback
 
@@ -66,8 +67,14 @@ class PSQL(Endpoint):
       return str(value)
     elif isinstance(value, datetime):
       return value.strftime("'%Y-%m-%d %H:%M:%S'")
+    elif isinstance(value, date):
+      return value.strftime("'%Y-%m-%d %H:%M:%S'")
     elif isinstance(value,unicode):
-      return value.encode('ascii','ignore')
+      return "'%s'"%(value.encode('ascii','ignore'))
+    elif isinstance(value, str):
+      return "'%s'"%(value)
+    elif isinstance(value, float):
+      return str(value)
     else:
       return value
     
