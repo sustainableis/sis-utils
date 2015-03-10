@@ -316,7 +316,7 @@ class PSQL(Endpoint):
           wheres = []
           for k,v in row.items():
             if k in selectors:
-              wheres.append('%s=%s'%(k,v))
+              wheres.append('%s=%s'%(k,self.cleanValue(v)))
               continue
             valueList.append(self.cleanValue(v))
             setList.append(k + '= %s')
