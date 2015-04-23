@@ -236,6 +236,7 @@ class PSQL(Endpoint):
       return None
     if self.conn:
       try:
+        localCursor = None
         dataKeys = []
         dataVals = []
         for key,value in dataDict.items():
@@ -263,7 +264,9 @@ class PSQL(Endpoint):
           self.conn.commit()
       except Exception, e:
         print e
-      	traceback.print_exc()  
+        traceback.print_exc()
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
       	raise
       finally:
         try:
