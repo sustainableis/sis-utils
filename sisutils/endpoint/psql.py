@@ -289,7 +289,7 @@ class PSQL(Endpoint):
   '''
   def upsert(self, table, selectors, dataDict, uniqueKeys=[],returning="id"):
     self.updateMany(table, selectors, [dataDict])
-    self.insertOne(table, dataDict, uniqueKeys=uniqueKeys, returning=returning)
+    return self.insertOne(table, dataDict, uniqueKeys=uniqueKeys, returning=returning)
   
   
   '''
@@ -299,7 +299,7 @@ class PSQL(Endpoint):
       selector: the 'where' part of the query
       dataDict: (List of Dicts) key -> column name, value -> column value
   '''
-  def updateMany(self, table, selectors, dataList):
+  def updateMany(self, table, selectors, dataList, cursor=None, commit=True):
     success = False
     if not self.insertEndpoint:
       print 'Inserting is not allowed under the current configuration'
@@ -326,20 +326,26 @@ class PSQL(Endpoint):
           where = 'WHERE ' + ' and '.join(wheres)
           executionList.append({'query': 'UPDATE '+ table + ' SET ' + ','.join(setList) + ' ' + where, 'val_tuple': tuple(valueList) })
         for execution in executionList:
-          cursor = self.conn.cursor()
+          if cursor is None:
+            localCursor = self.conn.cursor()
+          else:
+            localCursor = cursor
           print execution
-          cursor.execute(execution['query'],execution['val_tuple'])
-        self.conn.commit()
+          localCursor.execute(execution['query'],execution['val_tuple'])
+        if commit:
+          self.conn.commit()
         success = True
           
       except Exception, e:
         print traceback.print_exc()
         print e
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
         raise
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
       return success
