@@ -14,12 +14,13 @@ class SelectorError(Exception):
 
 class PSQL(Endpoint):
   
-  def __init__(self, appConfig, endpointConfig):
+  def __init__(self, appConfig, endpointConfig, debug=False):
     super(PSQL, self).__init__(appConfig)
     self.database = endpointConfig['database']
     self.user = endpointConfig['user']
     self.password = endpointConfig['pass']
     self.host = endpointConfig['host']
+    self.debug = debug
     self.conn = None
     
     
@@ -101,7 +102,8 @@ class PSQL(Endpoint):
           whereString = ' WHERE ' + ' and '.join(wheres)
         
         query = 'SELECT %s FROM %s %s'%(fieldString, tableName, whereString)
-        print query
+        if self.debug:
+            print query
         if dictResults:
           cursor = self.conn.cursor(cursor_factory=DictCursor)
         else:
@@ -251,7 +253,9 @@ class PSQL(Endpoint):
           query = "INSERT INTO %s (%s) SELECT %s where not exists(select %s from %s where %s) returning %s"%(table, ','.join(dataKeys), ','.join(dataVals), ','.join(dataKeys), table, uniqueWhere, returning)
         else:
           query = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"%(table, ','.join(dataKeys), ','.join(dataVals))
-        print query
+        
+        if self.debug:
+            print query
         if cursor is None:
           localCursor = self.conn.cursor()
         else:
@@ -330,7 +334,8 @@ class PSQL(Endpoint):
             localCursor = self.conn.cursor()
           else:
             localCursor = cursor
-          print execution
+          if self.debug:
+            print execution
           localCursor.execute(execution['query'],execution['val_tuple'])
         if commit:
           self.conn.commit()
