@@ -20,6 +20,10 @@ class PSQL(Endpoint):
     self.user = endpointConfig['user']
     self.password = endpointConfig['pass']
     self.host = endpointConfig['host']
+    if 'port' in endpointConfig:
+        self.port = endpointConfig['port']
+    else:
+        self.port = None
     self.debug = debug
     self.conn = None
     
@@ -30,7 +34,8 @@ class PSQL(Endpoint):
       self.conn = psycopg2.connect(database=self.database,
                                  user=self.user,
                                  password=self.password,
-                                 host=self.host)
+                                 host=self.host,
+                                 port=self.port)
                 
       print "Connected to PSQL Endpoint"              
     except Exception, e:
