@@ -173,6 +173,68 @@ class PSQL(Endpoint):
     else:
       raise NoConnectionException('You need to connect to the database!')
   
+  '''
+    Upsert many records into a table in the database
+    Parameters:
+      table: tableName (String)
+      dataList: (List of Dicts) key -> column name, value -> column value
+      upsertColumns: (List of Strings) -> conflict columns
+      upsertValues: (List of Strings) -> on conflict, set these columns
+  '''
+  def upsertMany(self, tableName, dataList, upsertColumns, upsertValues):
+    success = False
+    if not self.insertEndpoint:
+      print 'Inserting is not allowed under the current configuration'
+      return None
+    if not isinstance(dataList, list):
+      raise TypeError('insertMany arg[2] take type or subtype of a list!')
+    if self.conn:
+      try:
+        columnKeys = []
+        columnData = []
+        upsertIndexes = {}
+        if len(dataList) > 0:
+          columnKeys = dataList[0].keys()
+        else:
+          return None
+        for item in dataList:
+          itemData = []
+          for idx, key in enumerate(columnKeys):
+            itemData.append(self.cleanValue(item[key]))
+            if key in upsertColumns:
+                upsertIndexes[key] = idx
+            if key in upsertValues:
+                upsertIndexes[key] = idx
+          columnData.append(itemData)
+        # have all the data in lists now
+        keyString = ','.join(columnKeys)
+        valueStrings = []
+        for data in columnData:
+          valueStrings.append('(' + ','.join(data) + ')')
+        valueStrings = ','.join(valueStrings)
+        
+        upsertSetData = []
+        for val in upsertValues:
+            ## amount=exlcuded.amount
+            upsertSetData.append('{}=excluded.{}'.format(val, val))
+        
+        query = 'INSERT INTO %s (%s) VALUES %s on conflict (%s) DO UPDATE SET %s'%(tableName, keyString, valueStrings, ','.join(upsertColumns), ','.join(upsertSetData))
+        cursor = self.conn.cursor()
+        cursor.execute(query)
+        self.conn.commit()
+        success = True
+      except Exception, e:
+        print e
+        raise
+      finally:
+        try:
+          if cursor:
+            cursor.close()
+        except NameError:
+          pass
+      return success
+    else:
+      raise NoConnectionException('You need to connect to the database!') 
 
   '''
     Insert many records into a table in the database
