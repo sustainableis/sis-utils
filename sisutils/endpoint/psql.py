@@ -20,6 +20,10 @@ class PSQL(Endpoint):
     self.user = endpointConfig['user']
     self.password = endpointConfig['pass']
     self.host = endpointConfig['host']
+    if 'port' in endpointConfig:
+        self.port = endpointConfig['port']
+    else:
+        self.port = None
     self.debug = debug
     self.conn = None
     
@@ -30,7 +34,8 @@ class PSQL(Endpoint):
       self.conn = psycopg2.connect(database=self.database,
                                  user=self.user,
                                  password=self.password,
-                                 host=self.host)
+                                 host=self.host,
+                                 port=self.port)
                 
       print "Connected to PSQL Endpoint"              
     except Exception, e:
@@ -43,7 +48,7 @@ class PSQL(Endpoint):
   
   def getCursor(self):
     if self.conn:
-      return self.conn.cursor()
+      return self.conn.cursor(cursor_factory=DictCursor)
     else:
       raise NoConnectionException('You need to connect to the database before you get a cursor!')
   
@@ -88,8 +93,9 @@ class PSQL(Endpoint):
       conditions: list of conditions to satisfy (List of strings)
       wheres:     list of where statements (List of strings)
   '''
-  def select(self, tableName, fields=None, wheres=None, dictResults=False):
+  def select(self, tableName, fields=None, wheres=None, dictResults=True, cursor=None):
     if self.conn:
+      rows = []
       try:
         # parse the select string here
         if fields is None:
@@ -104,23 +110,32 @@ class PSQL(Endpoint):
         query = 'SELECT %s FROM %s %s'%(fieldString, tableName, whereString)
         if self.debug:
             print query
-        if dictResults:
-          cursor = self.conn.cursor(cursor_factory=DictCursor)
+        
+        if cursor is None:
+          if dictResults:
+            localCursor = self.conn.cursor(cursor_factory=DictCursor)
+          else:
+            localCursor = self.conn.cursor()
         else:
-          cursor = self.conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        return rows
+          localCursor = cursor
+        localCursor.execute(query)
+
+        rows = localCursor.fetchall()
+                
       except Exception, e:
         print e
+        traceback.print_exc()
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
       	raise
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
-      return []
+      return rows
+
     else:
       raise NoConnectionException('You need to connect to the database!')
 
@@ -132,42 +147,59 @@ class PSQL(Endpoint):
     try to do something stupid...might need to secure this
     later at some point
   '''
-  def complicatedSelectExecution(self, query, dictResults=False):
+  def complicatedSelectExecution(self, query, dictResults=True, cursor=None):
     if self.conn:
+      rows = []
       try:
-        if dictResults:
-          cursor = self.conn.cursor(cursor_factory=DictCursor)
+        if cursor is None:
+          if dictResults:
+            localCursor = self.conn.cursor(cursor_factory=DictCursor)
+          else:
+            localCursor = self.conn.cursor()
         else:
-          cursor = self.conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        return rows
+          localCursor = cursor
+        localCursor.execute(query)
+
+        rows = localCursor.fetchall()
+                
       except Exception, e:
         print e
-        raise  
+        traceback.print_exc()
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
+      	raise
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
+      return rows
     else:
       raise NoConnectionException('You need to connect to the database!')
   
   
-  def complicatedExecution(self, query):
+  def complicatedExecution(self, query, cursor=None, commit=True):
     if self.conn:
       try:
-        cursor = self.conn.cursor()
-        cursor.execute(query)
-        self.conn.commit()
+        if cursor is None:
+          localCursor = self.conn.cursor()
+        else:
+          localCursor = cursor
+        localCursor.execute(query)
+        if commit:
+            self.conn.commit()
+            
       except Exception, e:
         print e
-      	raise  
+        traceback.print_exc()
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
+      	raise
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
     else:
@@ -242,7 +274,7 @@ class PSQL(Endpoint):
       table: tableName (String)
       dataList: (List of Dicts) key -> column name, value -> column value
   '''
-  def insertMany(self, tableName, dataList):
+  def insertMany(self, tableName, dataList, cursor=None, commit=True):
     success = False
     if not self.insertEndpoint:
       print 'Inserting is not allowed under the current configuration'
@@ -270,17 +302,24 @@ class PSQL(Endpoint):
         valueStrings = ','.join(valueStrings)
         
         query = 'INSERT INTO %s (%s) VALUES %s'%(tableName, keyString, valueStrings)
-        cursor = self.conn.cursor()
-        cursor.execute(query)
-        self.conn.commit()
+        if cursor is None:
+          localCursor = self.conn.cursor()
+        else:
+          localCursor = cursor
+        localCursor.execute(query)
+        if commit:
+            self.conn.commit()
         success = True
       except Exception, e:
         print e
-        raise
+        traceback.print_exc()
+        if localCursor is not None:
+            self.rollbackCursor(localCursor)
+      	raise
       finally:
         try:
-          if cursor:
-            cursor.close()
+          if cursor is None:
+            localCursor.close()
         except NameError:
           pass
       return success
